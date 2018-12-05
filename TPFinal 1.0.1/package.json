@@ -1,0 +1,17 @@
+{
+  "name": "TPFinal",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "oow": "^1.5.0"
+  },
+  "devDependencies": {
+    "@ngarbezza/testy": "^2.1.0"
+  }
+}
