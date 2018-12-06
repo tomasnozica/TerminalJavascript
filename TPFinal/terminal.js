@@ -1,27 +1,24 @@
 require('oow/oow');
 class Consola {
-  constructor(){
+  constructor(directorioActual){
     this.usuarios = []
-    this.sesion = false;
-    this.directorioActual = new Directorio('raiz',null);
-    this.usuarioLogueado = '';
+    this.directorioActual = directorioActual;
+    this.usuarioLogueado = null;
   }
   login(usuario){
-    this.sesion = this.inListOfUsers(usuario);
-    this.usuarioLogueado = usuario;
-    return this.sesion;
-  }
-  inListOfUsers(usuario){
-    var i = this.usuarios.length;
-    while (i--) {
-        if (this.usuarios[i] == usuario) {
-            return true;
-        }
+    if(this.validateUser(usuario)){
+      this.usuarioLogueado = usuario;
     }
-    return false;
+  }
+  logout(){
+    this.usuarioLogueado = null;
   }
   newUser(usuario){
-    this.usuarios.push(usuario);
+    if(usuario.validacionDeFormato(usuario.user)){
+      this.usuarios.push(usuario);
+      return true;
+    }
+    return false;
   }
   deleteUser(usuario){
     var index = this.usuarios.indexOf(usuario);
@@ -29,8 +26,27 @@ class Consola {
       this.usuarios.splice(index, 1);
     }
   }
+  changeUserPassword(oldPass,newPass){
+    if (this.usuarioLogueado.password == oldPass ){
+      var index = this.usuarios.indexOf(this.usuarioLogueado);
+      this.usuarios[index].password = newPass;
+      this.usuarioLogueado = this.usuarios[index];
+    }
+  }
+  validateUser(usuario){
+    return this.usuarios.includes(usuario);
+  }
+  irA(unDirectorio){
+    this.directorioActual = unDirectorio;
+  }
   back(){
     return this.padre;
+  }
+  mkdir(directorioName){
+    return new Directorio(directorioName,this.directorioActual,this.usuarioLogueado);
+  }
+  editarArchivo(archivo, contenidoNuevo){
+    archivo.editar(contenidoNuevo);
   }
 }
 
@@ -40,25 +56,17 @@ class Archivo {
     this.contenido = contenido;
     this.owner = owner;
   }
-  
-  
+  editar(nuevoContenido){
+    this.contenido = nuevoContenido;
+  } 
 }
+
 class Directorio{
   constructor(fileName, padre, owner){
     this.nombre = fileName;
     this.padre = padre;
-    this.hijos = [];
     this.owner = owner;
-  }
-  displayItems(){
-    var i = this.hijos.length;
-    if(i==0){console.log('No items')}
-    while(i--){
-      console.log(this.hijos[i].nombre);
-    }
-  }
-  newElement(FileOrDirectory){
-    this.hijos.push(FileOrDirectory);
+    this.hijos = [];
   }
   deleteElement(FileOrDirectory){
     var index = this.hijos.indexOf(FileOrDirectory);
@@ -69,23 +77,33 @@ class Directorio{
   back(){
     return this.padre;
   }
-
+  newElement(FileOrDirectory){
+    this.hijos.push(FileOrDirectory);
+  }
 }
 class Usuario{
   constructor(user,password){
     this.user = user;
     this.password = password;
   }
-  changePassword(oldPass, newPass){
-    if (this.password == oldPass){
-      this.password = newPass;
-    }
+  validacionDeFormato(user){
+    let patron = /^[a-z0-9\-\_]{6,25}$/;
+    return patron.test(user);
   }
 }
+class Permiso{
+  constructor(user,mode){
+    this.user = user;
+    this.mode = mode;
+  }
+
+}
+
 
 module.exports = {
   Consola: Consola,
   Archivo: Archivo,
   Directorio: Directorio,
-  Usuario: Usuario
+  Usuario: Usuario,
+  Permiso: Permiso,
 };
