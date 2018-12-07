@@ -16,6 +16,7 @@ class Consola {
   newUser(usuario){
     if(usuario.validacionDeFormato(usuario.user)){
       this.usuarios.push(usuario);
+      this.directorioActual.permisos.push([usuario,'a']);
       return true;
     }
     return false;
@@ -43,30 +44,42 @@ class Consola {
     return this.padre;
   }
   mkdir(directorioName){
-    return new Directorio(directorioName,this.directorioActual,this.usuarioLogueado);
+    var carpeta = new Directorio(directorioName,this.directorioActual,this.usuarioLogueado)
+    this.addElement(carpeta);
+    return carpeta;
   }
   editarArchivo(archivo, contenidoNuevo){
-    archivo.editar(contenidoNuevo);
+    if(this.autorizarAccion(this.usuarioLogueado)){
+      archivo.editar(contenidoNuevo);
+    };
+  }
+  addElement(FileOrDirectory){
+    if(this.autorizarAccion(this.usuarioLogueado,'a')){
+      this.directorioActual.newElement(FileOrDirectory);
+    }
+  };
+  autorizarAccion(usuario,mode){
+    return this.directorioActual.validar(usuario,mode);
   }
 }
-
 class Archivo {
   constructor(nombre,contenido,owner){
     this.nombre = nombre;
     this.contenido = contenido;
     this.owner = owner;
+    this.permisos = [[owner,'a']];
   }
   editar(nuevoContenido){
     this.contenido = nuevoContenido;
   } 
 }
-
 class Directorio{
   constructor(fileName, padre, owner){
     this.nombre = fileName;
     this.padre = padre;
-    this.owner = owner;
     this.hijos = [];
+    this.owner = owner;
+    this.permisos = [[owner,'a']];
   }
   deleteElement(FileOrDirectory){
     var index = this.hijos.indexOf(FileOrDirectory);
@@ -80,6 +93,21 @@ class Directorio{
   newElement(FileOrDirectory){
     this.hijos.push(FileOrDirectory);
   }
+  validar(usuario,mode){
+    if (this.isRootUser(usuario)){return true}
+    return this.recorrerArray(this.permisos,usuario,mode);
+  }
+  isRootUser(usuario){
+    return usuario.user == 'root-user';
+  }
+  recorrerArray(arreglo,usuario,mode){
+    for (var i = 0; i < arreglo.length; i++) {
+      if(arreglo[i][0]==usuario && arreglo[i][1]==mode){
+        return true;
+      };
+    };
+  };
+
 }
 class Usuario{
   constructor(user,password){
@@ -91,13 +119,6 @@ class Usuario{
     return patron.test(user);
   }
 }
-class Permiso{
-  constructor(user,mode){
-    this.user = user;
-    this.mode = mode;
-  }
-
-}
 
 
 module.exports = {
@@ -105,5 +126,4 @@ module.exports = {
   Archivo: Archivo,
   Directorio: Directorio,
   Usuario: Usuario,
-  Permiso: Permiso,
 };

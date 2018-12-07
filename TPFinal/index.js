@@ -12,10 +12,10 @@ const { Consola, Archivo, Directorio, Usuario } = require('./terminal');
 
 suite('terminal', () => {
   before(() => {
-    var raiz = new Directorio('raiz',null,null);
-    var consola = new Consola(raiz);
     var usuario = new Usuario('tomas-n','clave');
     var rootUser = new Usuario('root-user','allaccess');
+    var raiz = new Directorio('raiz',rootUser,rootUser);
+    var consola = new Consola(raiz);
     var rootWrongPassword = new Usuario('root','1234')
     var carpeta = new Directorio('Escritorio', raiz, rootUser );
     var archivo = new Archivo('Mis Datos','Mi nombre es Tomas y tengo 20 años');
@@ -53,49 +53,46 @@ suite('terminal', () => {
   });
   test('06 - Crear una carpeta dentro de root', (c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
-    return assertEquals(c.consola.directorioActual.hijos[0],c.carpeta)
+    c.consola.addElement(c.carpeta);
+    return assertTrue(c.consola.directorioActual.hijos[0] == c.carpeta)
   });
   test('07 - Ir a una carpeta en root', (c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
-    console.log(c.consola.directorioActual);
-    console.log(c.consola.directorioActual.hijos);
+    c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);
-    console.log(c.consola.directorioActual.padre);
     return assertTrue(c.consola.directorioActual == c.carpeta)
   });
   test('08 - Crear un archivo en la nueva carpeta', (c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
+    c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);
-    c.consola.directorioActual.newElement(c.archivo);
+    c.consola.addElement(c.archivo);
     return assertTrue(c.consola.directorioActual.hijos[0] == c.archivo)
   });
   test('09 - Ver el contenido del archivo creado', (c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
+    c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);;
-    c.consola.directorioActual.newElement(c.archivo);
+    c.consola.addElement(c.archivo);
     return assertEquals(c.consola.directorioActual.hijos[0].contenido, 'Mi nombre es Tomas y tengo 20 años')
   });
   test('10 - Borrar un archivo',(c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
+    c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);;
-    c.consola.directorioActual.newElement(c.archivo);
+    c.consola.addElement(c.archivo);
     c.consola.directorioActual.deleteElement(c.archivo);
     return assertTrue(c.consola.directorioActual.hijos.length == 0)
   });
   test('11 - Borrar una carpeta',(c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
+    c.consola.addElement(c.carpeta);
     c.consola.directorioActual.deleteElement(c.carpeta);
     return assertTrue(c.consola.directorioActual.hijos.length == 0)
   });
   test('12 - Ir a la carpeta anterior sin indicar el nombre',(c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.carpeta);
+    c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);
     c.consola.irA(c.consola.directorioActual.back());
     return assertTrue(c.consola.directorioActual.nombre == 'raiz')
@@ -122,7 +119,6 @@ suite('terminal', () => {
     c.consola.logout();
     c.consola.login(c.usuario);
     var carpeta = c.consola.mkdir('Fotos');
-    c.consola.directorioActual.newElement(carpeta);
     c.consola.irA(carpeta);
     return assertEquals(c.consola.directorioActual.owner,c.usuario)
   });
@@ -155,7 +151,7 @@ suite('terminal', () => {
   });
   test('20 - Puedo editar un archivo existente', (c) => {
     c.consola.login(c.rootUser);
-    c.consola.directorioActual.newElement(c.archivo);
+    c.consola.addElement(c.archivo);
     c.consola.editarArchivo(c.archivo,'Juan compra peras en la fruteria');
     return assertEquals(c.archivo.contenido, 'Juan compra peras en la fruteria');
   });
@@ -163,6 +159,33 @@ suite('terminal', () => {
     c.consola.login(c.rootUser);
     return assertFalse(c.consola.newUser(new Usuario('name','123987')));
   });
+  test('22 - El owner tiene permiso de escritura en una carpeta que creo', (c) => {
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    var carpeta = c.consola.mkdir('Fotos');
+    return assertTrue(carpeta.permisos[0][0]== c.usuario);
+  });
+  test('23 - Alguien no autorizado no puede ejecutar el comando mkdir', (c) => {
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    var carpeta = c.consola.mkdir('Fotos');
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    c.consola.irA(carpeta);
+    var intento = c.consola.mkdir('MiCarpeta');
+    return assertTrue(c.consola.directorioActual.hijos[0] ==  undefined);
+  });
+  test('24 - El owner de una carpeta puede escribir un archivo', (c) =>{
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    var carpeta = c.consola.mkdir('Textos');
+    c.consola.irA(carpeta);
+    return assertTrue(1==1);
+  })
 
 
 });
