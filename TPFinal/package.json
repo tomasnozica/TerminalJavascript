@@ -9,9 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "oow": "^1.5.0"
+    "@pmoo/oow": "^1.5.0"
   },
   "devDependencies": {
-    "@ngarbezza/testy": "^2.1.0"
+    "@pmoo/testy": "^2.7.1"
   }
 }

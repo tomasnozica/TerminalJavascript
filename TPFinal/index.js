@@ -1,4 +1,4 @@
-require('oow');
+require('@pmoo/oow');
 const {
   suite,
   test,
@@ -6,13 +6,14 @@ const {
   assertTrue,
   assertFalse,
   assertEquals,
-} = require('@ngarbezza/testy');
+} = require('@pmoo/testy');
 
 const { Consola, Archivo, Directorio, Usuario } = require('./terminal');
 
 suite('terminal', () => {
   before(() => {
     var usuario = new Usuario('tomas-n','clave');
+    var nullUser = new Usuario('nulluser','nullpass');
     var rootUser = new Usuario('root-user','allaccess');
     var raiz = new Directorio('raiz',rootUser,rootUser);
     var consola = new Consola(raiz);
@@ -29,11 +30,12 @@ suite('terminal', () => {
       carpeta: carpeta,
       archivo: archivo,
       raiz: raiz,
+      nullUser: nullUser,
     }
   });
   
   test('01 - Inicialmente no hay ningun usuario logueado', (c) => {
-    return assertTrue(c.consola.usuarioLogueado == null)
+    return assertEquals(c.consola.usuarioLogueado,c.nullUser)
   });
   test('02 - Nos podemos loguear como root',(c) => {
     c.consola.login(c.rootUser);
@@ -41,7 +43,7 @@ suite('terminal', () => {
   });
   test('03 - Si la contraseña de root esta mal no se puede loguear' ,(c) => {
     c.consola.login(c.rootWrongPassword);
-    return assertTrue(c.consola.usuarioLogueado == null);
+    return assertEquals(c.consola.usuarioLogueado,c.nullUser);
   });
   test('04 - Si el logueo es exitoso, la carpeta actual es raiz', (c) => {
     c.consola.login(c.rootUser);
@@ -81,13 +83,13 @@ suite('terminal', () => {
     c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);;
     c.consola.addElement(c.archivo);
-    c.consola.directorioActual.deleteElement(c.archivo);
+    c.consola.eliminar(c.archivo.nombre);
     return assertTrue(c.consola.directorioActual.hijos.length == 0)
   });
   test('11 - Borrar una carpeta',(c) => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
-    c.consola.directorioActual.deleteElement(c.carpeta);
+    c.consola.eliminar(c.carpeta.nombre);
     return assertTrue(c.consola.directorioActual.hijos.length == 0)
   });
   test('12 - Ir a la carpeta anterior sin indicar el nombre',(c) => {
@@ -111,7 +113,7 @@ suite('terminal', () => {
   });
   test('15 - No nos podemos loguear con un usuario no existente',(c) => {
     c.consola.login(c.usuario);
-    return assertTrue(c.consola.usuarioLogueado == null)
+    return assertEquals(c.consola.usuarioLogueado,c.nullUser)
   });
   test('16 - Cuando se crea archivo o carpeta el usuario actual es dueño',(c) => {
     c.consola.login(c.rootUser);
@@ -136,7 +138,7 @@ suite('terminal', () => {
     c.consola.changeUserPassword('clave','12456');
     c.consola.logout();
     c.consola.login(c.usuario);
-    return assertTrue(c.consola.usuarioLogueado == c.usuario)
+    return assertEquals(c.consola.usuarioLogueado,c.usuario)
   });
   test('19 - Cambio la clave y no puedo entrar con la vieja', (c) => {
     c.consola.login(c.rootUser);
@@ -147,7 +149,7 @@ suite('terminal', () => {
     c.consola.logout();
     var wrongAccess = new Usuario('tomas-n','clave');
     c.consola.login(wrongAccess);
-    return assertTrue(c.consola.usuarioLogueado == null)
+    return assertEquals(c.consola.usuarioLogueado,c.nullUser)
   });
   test('20 - Puedo editar un archivo existente', (c) => {
     c.consola.login(c.rootUser);
@@ -184,8 +186,79 @@ suite('terminal', () => {
     c.consola.login(c.usuario);
     var carpeta = c.consola.mkdir('Textos');
     c.consola.irA(carpeta);
-    return assertTrue(1==1);
-  })
-
-
+    c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
+    return assertEquals(c.consola.directorioActual.hijos[0].contenido, 'Este es mi texto de prueba');
+  });
+  test('25 - Alguien no autorizado no puede escribir archivo', (c) =>{
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    var carpeta = c.consola.mkdir('Textos');
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    c.consola.irA(carpeta);
+    c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
+    return assertTrue(c.consola.directorioActual.hijos[0] == undefined);
+  });
+  test('26 - Creador puede agregar permiso sobre su carpeta', (c) => {
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    var usuario = new Usuario('usuario','usuario');
+    c.consola.newUser(usuario);
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    var carpeta = c.consola.mkdir('Textos');
+    c.consola.agregarPermiso(usuario,'r',carpeta);
+    c.consola.irA(carpeta);
+    return assertEquals(c.consola.directorioActual.permisos[1][0],usuario);
+  });
+  test('27 - Usuario con permiso puede entrar a carpeta' , (c)=>{
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    var usuario = new Usuario('usuario','usuario');
+    c.consola.newUser(usuario);
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    var carpeta = c.consola.mkdir('Textos');
+    c.consola.agregarPermiso(usuario,'r',carpeta);
+    c.consola.logout();
+    c.consola.login(usuario);
+    c.consola.irA(carpeta);
+    return assertEquals(c.consola.directorioActual.nombre,carpeta.nombre);
+  });
+  test('28 - Usuario owner puede quitar permiso' , (c) => {
+    c.consola.login(c.rootUser);
+    c.consola.newUser(c.usuario);
+    var usuario = new Usuario('usuario','usuario');
+    c.consola.newUser(usuario);
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    var carpeta = c.consola.mkdir('Textos');
+    c.consola.agregarPermiso(usuario,'r',carpeta);
+    c.consola.irA(carpeta);
+    c.consola.logout();
+    c.consola.login(c.usuario);
+    c.consola.irA(carpeta);
+    c.consola.quitarPermiso(usuario,'r',carpeta);
+    return assertEquals(c.consola.directorioActual.permisos[1],undefined);
+  });
+  test('29 - Puedo mover un archivo de un directorio a otro' , (c)=>{
+    c.consola.login(c.rootUser);
+    var carpeta = c.consola.mkdir('Textos');
+    var carpeta2 = c.consola.mkdir('Videos');
+    c.consola.irA(carpeta);
+    var archivo = c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
+    c.consola.mover(archivo,carpeta2);
+    c.consola.irA(carpeta2);
+    return assertTrue(c.consola.directorioActual.hijos[0] == archivo);
+  });
+  test('30 - Puedo mover una carpeta de un directorio a otro' , (c)=>{
+    c.consola.login(c.rootUser);
+    var carpeta = c.consola.mkdir('Fotos');
+    var carpeta2 = c.consola.mkdir('Videos');
+    c.consola.irA(carpeta);
+    var carpetaMover = c.consola.mkdir('El Viaje');
+    c.consola.mover(carpetaMover,carpeta2);
+    c.consola.irA(carpeta2);
+    return assertTrue(c.consola.directorioActual.hijos[0] == carpetaMover);
+  });
 });
