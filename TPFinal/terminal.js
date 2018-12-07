@@ -34,7 +34,7 @@ class Consola {
     return this.usuarios.includes(usuario);
   }
   irA(unDirectorio){
-    if(this.permisoDeLectura()){
+    if(this.permisoDeLectura(unDirectorio)){
       this.directorioActual = unDirectorio;
     }
   }
@@ -47,40 +47,40 @@ class Consola {
     return carpeta;
   }
   editarArchivo(archivo, contenidoNuevo){
-    if(this.permisoDeEscritura()){
+    if(this.permisoDeEscritura(archivo)){
       archivo.editar(contenidoNuevo);
     };
   }
   leerArchivo(archivo){
-    if(this.permisoDeLectura()){
+    if(this.permisoDeLectura(archivo)){
       archivo.leer(contenidoNuevo);
     };
   }
   escribirArchivo(nombre,contenido){
-    if(this.permisoDeEscritura()){
-      var archivo = new Archivo(nombre,contenido,this.usuarioLogueado)
+    if(this.permisoDeEscritura(this.directorioActual)){
+      var archivo = new Archivo(nombre,contenido,this.usuarioLogueado,this.directorioActual)
       this.addElement(archivo);
       return archivo;
     }
   }
   addElement(FileOrDirectory){
-    if(this.permisoDeEscritura()){
+    if(this.permisoDeEscritura(this.directorioActual)){
       this.directorioActual.newElement(FileOrDirectory);
     }
   }
   eliminar(directorioName){
-    if(this.permisoDeEscritura()){
+    if(this.permisoDeEscritura(this.directorioActual)){
       this.directorioActual.deleteElement(directorioName);
     }
   }
-  autorizarAccion(usuario,mode){
-    return this.directorioActual.validar(usuario,mode);
+  autorizarAccion(usuario,mode,fileOrDirectory){
+    return fileOrDirectory.validar(usuario,mode);
   }
-  permisoDeEscritura(){
-    return this.autorizarAccion(this.usuarioLogueado,'a') || this.autorizarAccion(this.usuarioLogueado,'w')
+  permisoDeEscritura(fileOrDirectory){
+    return this.autorizarAccion(this.usuarioLogueado,'a',fileOrDirectory) || this.autorizarAccion(this.usuarioLogueado,'w',fileOrDirectory)
   }
-  permisoDeLectura(){
-    return this.autorizarAccion(this.usuarioLogueado,'a') || this.autorizarAccion(this.usuarioLogueado,'r')
+  permisoDeLectura(fileOrDirectory){
+    return this.autorizarAccion(this.usuarioLogueado,'a',fileOrDirectory) || this.autorizarAccion(this.usuarioLogueado,'r',fileOrDirectory)
   }
   agregarPermiso(usuario,modo,fileOrDirectory){
     if(this.usuarioLogueado == fileOrDirectory.owner){
@@ -100,9 +100,10 @@ class Consola {
   }
 }
 class System {
-  constructor(nombre,owner){
+  constructor(nombre,owner,padre){
     this.nombre = nombre;
     this.owner = owner;
+    this.padre = padre;
     this.permisos = [[owner,'a']];
   }
   validar(usuario,mode){
@@ -130,8 +131,8 @@ class System {
   }
 }
 class Archivo extends System {
-  constructor(nombre,contenido,owner){
-    super(nombre,owner);
+  constructor(nombre,contenido,owner,padre){
+    super(nombre,owner,padre);
     this.contenido = contenido;
   }
   editar(nuevoContenido){
@@ -141,13 +142,13 @@ class Archivo extends System {
     return this.contenido;
   }
   mover(destino){
+    this.padre.deleteElement(this.nombre);
     this.padre = destino;
   } 
 }
 class Directorio extends System{
   constructor(fileName, padre, owner){
-    super(fileName,owner);
-    this.padre = padre;
+    super(fileName,owner,padre);
     this.hijos = [];
   }
   deleteElement(FileOrDirectoryName){

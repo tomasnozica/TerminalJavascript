@@ -19,7 +19,7 @@ suite('terminal', () => {
     var consola = new Consola(raiz);
     var rootWrongPassword = new Usuario('root','1234')
     var carpeta = new Directorio('Escritorio', raiz, rootUser );
-    var archivo = new Archivo('Mis Datos','Mi nombre es Tomas y tengo 20 años');
+    var archivo = new Archivo('Mis Datos','Mi nombre es Tomas y tengo 20 años',rootUser,rootUser);
     consola.newUser(rootUser);
 
     return {
@@ -173,6 +173,7 @@ suite('terminal', () => {
     c.consola.login(c.rootUser);
     c.consola.newUser(c.usuario);
     var carpeta = c.consola.mkdir('Fotos');
+    c.consola.agregarPermiso(c.usuario,'r',carpeta);
     c.consola.logout();
     c.consola.login(c.usuario);
     c.consola.irA(carpeta);
@@ -193,6 +194,7 @@ suite('terminal', () => {
     c.consola.login(c.rootUser);
     c.consola.newUser(c.usuario);
     var carpeta = c.consola.mkdir('Textos');
+    c.consola.agregarPermiso(c.usuario,'r',carpeta);
     c.consola.logout();
     c.consola.login(c.usuario);
     c.consola.irA(carpeta);
