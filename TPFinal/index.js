@@ -96,7 +96,7 @@ suite('terminal', () => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
     c.consola.irA(c.carpeta);
-    c.consola.irA(c.consola.directorioActual.back());
+    c.consola.back();
     return assertTrue(c.consola.directorioActual.nombre == 'raiz')
   });
   test('13 - Crear un usuario logueado como root',(c) => {
@@ -262,5 +262,25 @@ suite('terminal', () => {
     c.consola.mover(carpetaMover,carpeta2);
     c.consola.irA(carpeta2);
     return assertTrue(c.consola.directorioActual.hijos[0] == carpetaMover);
+  });
+  test('31 - Puedo copiar un archivo en otra carpeta' , (c)=> {
+    c.consola.login(c.rootUser);
+    var carpeta = c.consola.mkdir('Textos');
+    var carpeta2 = c.consola.mkdir('Videos');
+    c.consola.irA(carpeta);
+    var archivo = c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
+    c.consola.copiar(archivo,carpeta2);
+    return assertEquals(carpeta.hijos[0].nombre,carpeta2.hijos[0].nombre);
+  });
+  test('32 - Puedo copiar una carpeta en otro directorio' , (c) => {
+    c.consola.login(c.rootUser);
+    var carpeta = c.consola.mkdir('Fotos');
+    var carpeta2 = c.consola.mkdir('Videos');
+    c.consola.irA(carpeta);
+    var carpetaMover = c.consola.mkdir('El Viaje');
+    c.consola.irA(carpetaMover);
+    var subCarpetaMover = c.consola.mkdir('Bariloche');
+    c.consola.copiar(carpetaMover,carpeta2);
+    return assertEquals(carpeta.hijos[0].nombre,carpeta2.hijos[0].nombre);
   });
 });

@@ -14,7 +14,7 @@ class Consola {
     this.usuarioLogueado = new Usuario('nulluser','nullpass');;
   }
   newUser(usuario){
-    if(usuario.validacionDeFormato(usuario.user)){
+    if(usuario.validacionDeFormato(usuario.user) && this.usuarioLogueado.validacion()){
       this.usuarios.push(usuario);
       this.directorioActual.permisos.push([usuario,'a']);
       return true;
@@ -39,7 +39,7 @@ class Consola {
     }
   }
   back(){
-    return this.padre;
+    this.directorioActual = this.directorioActual.padre;
   }
   mkdir(directorioName){
     var carpeta = new Directorio(directorioName,this.directorioActual,this.usuarioLogueado)
@@ -98,6 +98,11 @@ class Consola {
       destino.newElement(fileOrDirectory);
     }
   }
+  copiar(fileOrDirectory,destino){
+    if(this.usuarioLogueado == fileOrDirectory.owner){
+      fileOrDirectory.copy(destino);
+    };
+  };
 }
 class System {
   constructor(nombre,owner,padre){
@@ -129,6 +134,10 @@ class System {
       this.permisos.splice(index, 1);
     }
   }
+  mover(destino){
+    this.padre.deleteElement(this.nombre);
+    this.padre = destino;
+  } 
 }
 class Archivo extends System {
   constructor(nombre,contenido,owner,padre){
@@ -141,10 +150,10 @@ class Archivo extends System {
   leer(){
     return this.contenido;
   }
-  mover(destino){
-    this.padre.deleteElement(this.nombre);
-    this.padre = destino;
-  } 
+  copy(destino){
+    var archivoCopia = new Archivo(this.nombre,this.contenido,this.owner,destino);
+    destino.newElement(archivoCopia);
+  }
 }
 class Directorio extends System{
   constructor(fileName, padre, owner){
@@ -170,9 +179,15 @@ class Directorio extends System{
       };
     };
   }
-  mover(destino){
-    this.padre.deleteElement(this.nombre);
-    this.padre = destino;
+  copy(destino){
+    var copiaCarpeta = new Directorio(this.nombre,destino,this.owner);
+    this.copyHijos(copiaCarpeta);
+    destino.newElement(copiaCarpeta);
+  }
+  copyHijos(object){
+    for (var i = 0; i < this.hijos.length; i++) {
+      object.newElement(this.hijos[i]);
+    }
   }
 }
 class Usuario{
@@ -188,6 +203,9 @@ class Usuario{
     if(this.password == oldPass){
       this.password = newPass;
     }
+  }
+  validacion(){
+    return this.user=='root-user' || this.user=='nulluser';
   }
 }
 
