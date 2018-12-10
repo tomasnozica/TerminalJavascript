@@ -3,7 +3,7 @@ class Consola {
   constructor(directorioActual){
     this.usuarios = []
     this.directorioActual = directorioActual;
-    this.usuarioLogueado = new Usuario('nulluser','nullpass');;
+    this.usuarioLogueado = new NullUser();;
   }
   login(usuario){
     if(this.validateUser(usuario)){
@@ -11,7 +11,7 @@ class Consola {
     }
   }
   logout(){
-    this.usuarioLogueado = new Usuario('nulluser','nullpass');;
+    this.usuarioLogueado = new NullUser();;
   }
   newUser(usuario){
     if(usuario.validacionDeFormato(usuario.user) && this.usuarioLogueado.validacion()){
@@ -33,7 +33,7 @@ class Consola {
   validateUser(usuario){
     return this.usuarios.includes(usuario);
   }
-  irA(unDirectorio){
+  cd(unDirectorio){
     if(this.permisoDeLectura(unDirectorio)){
       this.directorioActual = unDirectorio;
     }
@@ -103,6 +103,9 @@ class Consola {
       fileOrDirectory.copy(destino);
     };
   };
+  ls(){
+    this.directorioActual.displayItems();
+  }
 }
 class System {
   constructor(nombre,owner,padre){
@@ -170,15 +173,19 @@ class Directorio extends System{
     return this.padre;
   }
   newElement(FileOrDirectory){
-    this.hijos.push(FileOrDirectory);
+    if(this.retornaElHijo(FileOrDirectory.nombre)==-1){
+      this.hijos.push(FileOrDirectory);
+    }
   }
   retornaElHijo(nombre){
     for (var i = 0; i < this.hijos.length; i++) {
       if(this.hijos[i].nombre==nombre){
         return i;
       };
-    };
+    }
+    return -1
   }
+
   copy(destino){
     var copiaCarpeta = new Directorio(this.nombre,destino,this.owner);
     this.copyHijos(copiaCarpeta);
@@ -189,11 +196,21 @@ class Directorio extends System{
       object.newElement(this.hijos[i]);
     }
   }
+  displayItems(){
+    for (var i = 0; i < this.hijos.length; i++) {
+      console.log(this.hijos[i].nombre);
+    }
+  }
 }
 class Usuario{
   constructor(user,password){
     this.user = user;
     this.password = password;
+  }
+}
+class RealUser extends Usuario{
+  constructor(user,password){
+    super(user,password);
   }
   validacionDeFormato(user){
     let patron = /^[a-z0-9\-\_]{6,25}$/;
@@ -205,7 +222,15 @@ class Usuario{
     }
   }
   validacion(){
-    return this.user=='root-user' || this.user=='nulluser';
+    return this.user=='root-user';
+  }
+}
+class NullUser extends Usuario{
+  constructor(){
+    super('nulluser','nullpass');
+  }
+  validacion(){
+    return true
   }
 }
 
@@ -215,4 +240,6 @@ module.exports = {
   Archivo: Archivo,
   Directorio: Directorio,
   Usuario: Usuario,
+  RealUser: RealUser,
+  NullUser: NullUser,
 };

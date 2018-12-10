@@ -8,16 +8,16 @@ const {
   assertEquals,
 } = require('@pmoo/testy');
 
-const { Consola, Archivo, Directorio, Usuario } = require('./terminal');
+const { Consola, Archivo, Directorio, Usuario, RealUser, NullUser } = require('./terminal');
 
 suite('terminal', () => {
   before(() => {
-    var usuario = new Usuario('tomas-n','clave');
-    var nullUser = new Usuario('nulluser','nullpass');
-    var rootUser = new Usuario('root-user','allaccess');
-    var raiz = new Directorio('raiz',rootUser,rootUser);
+    var usuario = new RealUser('tomas-n','clave');
+    var nullUser = new NullUser();
+    var rootUser = new RealUser('root-user','allaccess');
+    var raiz = new Directorio('raiz',rootUser,raiz);
     var consola = new Consola(raiz);
-    var rootWrongPassword = new Usuario('root','1234')
+    var rootWrongPassword = new RealUser('root','1234')
     var carpeta = new Directorio('Escritorio', raiz, rootUser );
     var archivo = new Archivo('Mis Datos','Mi nombre es Tomas y tengo 20 años',rootUser,rootUser);
     consola.newUser(rootUser);
@@ -61,27 +61,27 @@ suite('terminal', () => {
   test('07 - Ir a una carpeta en root', (c) => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
-    c.consola.irA(c.carpeta);
+    c.consola.cd(c.carpeta);
     return assertTrue(c.consola.directorioActual == c.carpeta)
   });
   test('08 - Crear un archivo en la nueva carpeta', (c) => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
-    c.consola.irA(c.carpeta);
+    c.consola.cd(c.carpeta);
     c.consola.addElement(c.archivo);
     return assertTrue(c.consola.directorioActual.hijos[0] == c.archivo)
   });
   test('09 - Ver el contenido del archivo creado', (c) => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
-    c.consola.irA(c.carpeta);;
+    c.consola.cd(c.carpeta);;
     c.consola.addElement(c.archivo);
     return assertEquals(c.consola.directorioActual.hijos[0].contenido, 'Mi nombre es Tomas y tengo 20 años')
   });
   test('10 - Borrar un archivo',(c) => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
-    c.consola.irA(c.carpeta);;
+    c.consola.cd(c.carpeta);;
     c.consola.addElement(c.archivo);
     c.consola.eliminar(c.archivo.nombre);
     return assertTrue(c.consola.directorioActual.hijos.length == 0)
@@ -95,7 +95,7 @@ suite('terminal', () => {
   test('12 - Ir a la carpeta anterior sin indicar el nombre',(c) => {
     c.consola.login(c.rootUser);
     c.consola.addElement(c.carpeta);
-    c.consola.irA(c.carpeta);
+    c.consola.cd(c.carpeta);
     c.consola.back();
     return assertTrue(c.consola.directorioActual.nombre == 'raiz')
   });
@@ -121,7 +121,7 @@ suite('terminal', () => {
     c.consola.logout();
     c.consola.login(c.usuario);
     var carpeta = c.consola.mkdir('Fotos');
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     return assertEquals(c.consola.directorioActual.owner,c.usuario)
   });
   test('17 - Se puede eliminiar un usuario', (c) => {
@@ -147,7 +147,7 @@ suite('terminal', () => {
     c.consola.login(c.usuario);
     c.consola.changeUserPassword('clave','12456');
     c.consola.logout();
-    var wrongAccess = new Usuario('tomas-n','clave');
+    var wrongAccess = new RealUser('tomas-n','clave');
     c.consola.login(wrongAccess);
     return assertEquals(c.consola.usuarioLogueado,c.nullUser)
   });
@@ -159,7 +159,7 @@ suite('terminal', () => {
   });
   test('21 - Si un usuario no respeta el formato no se crea', (c) => {
     c.consola.login(c.rootUser);
-    return assertFalse(c.consola.newUser(new Usuario('name','123987')));
+    return assertFalse(c.consola.newUser(new RealUser('name','123987')));
   });
   test('22 - El owner tiene permiso de escritura en una carpeta que creo', (c) => {
     c.consola.login(c.rootUser);
@@ -176,7 +176,7 @@ suite('terminal', () => {
     c.consola.agregarPermiso(c.usuario,'r',carpeta);
     c.consola.logout();
     c.consola.login(c.usuario);
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     var intento = c.consola.mkdir('MiCarpeta');
     return assertTrue(c.consola.directorioActual.hijos[0] ==  undefined);
   });
@@ -186,7 +186,7 @@ suite('terminal', () => {
     c.consola.logout();
     c.consola.login(c.usuario);
     var carpeta = c.consola.mkdir('Textos');
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
     return assertEquals(c.consola.directorioActual.hijos[0].contenido, 'Este es mi texto de prueba');
   });
@@ -197,26 +197,26 @@ suite('terminal', () => {
     c.consola.agregarPermiso(c.usuario,'r',carpeta);
     c.consola.logout();
     c.consola.login(c.usuario);
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
     return assertTrue(c.consola.directorioActual.hijos[0] == undefined);
   });
   test('26 - Creador puede agregar permiso sobre su carpeta', (c) => {
     c.consola.login(c.rootUser);
     c.consola.newUser(c.usuario);
-    var usuario = new Usuario('usuario','usuario');
+    var usuario = new RealUser('usuario','usuario');
     c.consola.newUser(usuario);
     c.consola.logout();
     c.consola.login(c.usuario);
     var carpeta = c.consola.mkdir('Textos');
     c.consola.agregarPermiso(usuario,'r',carpeta);
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     return assertEquals(c.consola.directorioActual.permisos[1][0],usuario);
   });
   test('27 - Usuario con permiso puede entrar a carpeta' , (c)=>{
     c.consola.login(c.rootUser);
     c.consola.newUser(c.usuario);
-    var usuario = new Usuario('usuario','usuario');
+    var usuario = new RealUser('usuario','usuario');
     c.consola.newUser(usuario);
     c.consola.logout();
     c.consola.login(c.usuario);
@@ -224,22 +224,22 @@ suite('terminal', () => {
     c.consola.agregarPermiso(usuario,'r',carpeta);
     c.consola.logout();
     c.consola.login(usuario);
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     return assertEquals(c.consola.directorioActual.nombre,carpeta.nombre);
   });
   test('28 - Usuario owner puede quitar permiso' , (c) => {
     c.consola.login(c.rootUser);
     c.consola.newUser(c.usuario);
-    var usuario = new Usuario('usuario','usuario');
+    var usuario = new RealUser('usuario','usuario');
     c.consola.newUser(usuario);
     c.consola.logout();
     c.consola.login(c.usuario);
     var carpeta = c.consola.mkdir('Textos');
     c.consola.agregarPermiso(usuario,'r',carpeta);
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     c.consola.logout();
     c.consola.login(c.usuario);
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     c.consola.quitarPermiso(usuario,'r',carpeta);
     return assertEquals(c.consola.directorioActual.permisos[1],undefined);
   });
@@ -247,27 +247,27 @@ suite('terminal', () => {
     c.consola.login(c.rootUser);
     var carpeta = c.consola.mkdir('Textos');
     var carpeta2 = c.consola.mkdir('Videos');
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     var archivo = c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
     c.consola.mover(archivo,carpeta2);
-    c.consola.irA(carpeta2);
+    c.consola.cd(carpeta2);
     return assertTrue(c.consola.directorioActual.hijos[0] == archivo);
   });
   test('30 - Puedo mover una carpeta de un directorio a otro' , (c)=>{
     c.consola.login(c.rootUser);
     var carpeta = c.consola.mkdir('Fotos');
     var carpeta2 = c.consola.mkdir('Videos');
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     var carpetaMover = c.consola.mkdir('El Viaje');
     c.consola.mover(carpetaMover,carpeta2);
-    c.consola.irA(carpeta2);
+    c.consola.cd(carpeta2);
     return assertTrue(c.consola.directorioActual.hijos[0] == carpetaMover);
   });
   test('31 - Puedo copiar un archivo en otra carpeta' , (c)=> {
     c.consola.login(c.rootUser);
     var carpeta = c.consola.mkdir('Textos');
     var carpeta2 = c.consola.mkdir('Videos');
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     var archivo = c.consola.escribirArchivo('Mi Texto','Este es mi texto de prueba');
     c.consola.copiar(archivo,carpeta2);
     return assertEquals(carpeta.hijos[0].nombre,carpeta2.hijos[0].nombre);
@@ -276,11 +276,18 @@ suite('terminal', () => {
     c.consola.login(c.rootUser);
     var carpeta = c.consola.mkdir('Fotos');
     var carpeta2 = c.consola.mkdir('Videos');
-    c.consola.irA(carpeta);
+    c.consola.cd(carpeta);
     var carpetaMover = c.consola.mkdir('El Viaje');
-    c.consola.irA(carpetaMover);
+    c.consola.cd(carpetaMover);
     var subCarpetaMover = c.consola.mkdir('Bariloche');
     c.consola.copiar(carpetaMover,carpeta2);
     return assertEquals(carpeta.hijos[0].nombre,carpeta2.hijos[0].nombre);
   });
+  test('33 - No se pueden crear carpetas o archivos con el mismo nombre' , (c)=> {
+    c.consola.login(c.rootUser);
+    var carpeta = c.consola.mkdir('Fotos');
+    var carpetaMismoNombre = c.consola.mkdir('Fotos');
+    return assertTrue(c.consola.directorioActual.hijos[1]==undefined);
+  });
+
 });
